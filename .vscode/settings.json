@@ -1,0 +1,13 @@
+{
+    "python.pythonPath": "C:\\Users\\brave\\.virtualenvs\\pynmap-S3q1UwUv\\Scripts\\python.exe",
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        ".",
+        "-p",
+        "test*.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.unittestEnabled": true
+}
