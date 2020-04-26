@@ -9,7 +9,7 @@ from scapy.all import sr, sr1, IP, ICMP, TCP, RandShort
 OPEN_PORTS = []
 timeout = 1.5
 size = 10000
-start_info = "Starting pynmap 0.01"
+start_info = "Starting pynmap 0.0.1"
 locker = threading.Lock()
 m = {
     "22": "ssh",
@@ -29,18 +29,6 @@ def show_info(info, extra=""):
 def show_discovery(port, dst):
     print(f"Discovered open port {port}/tcp on {dst}")
 
-    
-def scan_batch(ip, ports, timeout=timeout, verbose=False):
-    th_li = []
-    for port in ports:
-        th_li.append(threading.Thread(target=scan,
-                                      args=(ip, port, timeout, verbose)))
-    for th in th_li:
-        th.start()
-
-    for th in th_li:
-        th.join()
-
 
 def scan(ip, ports, timeout=timeout, verbose=False):
     """Do SYN scan on a specific ip and port
@@ -50,11 +38,12 @@ def scan(ip, ports, timeout=timeout, verbose=False):
         port {int} -- port number
 
     Keyword Arguments:
-        timeout {int} -- how much time to wait after the last packet has been sent (default: {3})
+        timeout {number} -- how much time to wait after the last packet has been sent (default: {3})
     """
     # show_info(f"Scan {ip} {port}")
     global OPEN_PORTS
-    ans, _ = sr(IP(dst=ip)/TCP(sport=RandShort(), dport=ports, flags="S"),
+    sport = RandShort()
+    ans, _ = sr(IP(dst=ip)/TCP(sport=sport, dport=ports, flags="S"),
                     timeout=timeout,
                     verbose=0)
 
@@ -71,6 +60,18 @@ def scan(ip, ports, timeout=timeout, verbose=False):
 
     
 def scan_range(dst, start, end, timeout=timeout, verbose=False, size=size):
+    """Scan a range of ports
+
+    Arguments:
+        dst {str} -- target IP address
+        start {int} -- start port
+        end {int} -- end port
+
+    Keyword Arguments:
+        timeout {number} -- time wait for a response packet (default: {timeout})
+        verbose {bool} -- verbose or not (default: {False})
+        size {int} -- how many ports assign to a thread (default: {size})
+    """    
     if start == end:
         scan(dst, start, timeout, verbose)
         return
@@ -92,22 +93,25 @@ def scan_range(dst, start, end, timeout=timeout, verbose=False, size=size):
 @click.option("--verbose", help="Verbose or not (default False)", type=bool,
                required=False, default=False)
 @click.option("--port", help="Port ranges(default 1-65535)", default="1-65535")
+@click.option("--ping", help="Ping before scan", default=False)
 @click.option("--size", help="Thread group size", default=1000)
 @click.option("--timeout",
               help="how much time to wait after the last packet has been sent",
-              default=3)
+              default=3.0)
 @click.argument("dst", required=True, type=str)
-def pynmap(verbose, timeout, dst, port, size):
-    """A simple SYN scanner."""
+def pynmap(verbose, timeout, dst, port, ping, size):
+    """A simple SYN scanner.
+    """
     global OPEN_PORTS
     start_time = time.time()
-    ans, _ = sr(IP(dst=dst)/ICMP(id=RandShort()), verbose=0, retry=2, timeout=timeout)
-    if not ans:
-        elapsed = time.time() - start_time
-        print("Note: Host seems down.")
-        print(f"pynmap done: 1 IP address(0 hosts up) scanned in {round(elapsed)} seconds")
-        return
-        
+    if ping:
+        ans, _ = sr(IP(dst=dst)/ICMP(id=RandShort()), verbose=0, retry=2, timeout=timeout)
+        if not ans:
+            elapsed = time.time() - start_time
+            print("Note: Host seems down.")
+            print(f"pynmap done: 1 IP address(0 hosts up) scanned in {round(elapsed)} seconds")
+            return
+            
     if verbose:
         show_info(start_info)
 
